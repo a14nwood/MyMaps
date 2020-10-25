@@ -1,8 +1,12 @@
 package edu.stanford.mialwojr.mymaps
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -12,7 +16,10 @@ import android.view.MenuItem
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -29,6 +36,7 @@ private const val TAG = "CreateMapActivity"
 
 class CreateMapActivity : AppCompatActivity(), OnMapReadyCallback {
     private var markers: MutableList<Marker> = mutableListOf()
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var mMap: GoogleMap
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +55,8 @@ class CreateMapActivity : AppCompatActivity(), OnMapReadyCallback {
                 .setActionTextColor(ContextCompat.getColor(this, android.R.color.white))
                 .show()
         }
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -89,11 +99,12 @@ class CreateMapActivity : AppCompatActivity(), OnMapReadyCallback {
      * it inside the SupportMapFragment. This method will only be triggered once the user has
      * installed Google Play services and returned to the app.
      */
+    @SuppressLint("MissingPermission")
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
 
         mMap.setOnInfoWindowClickListener { markerToDelete ->
-            Log.i(TAG, "onWindowClickListener- delete this marker")
+            Log.i(TAG, "onWindowClickListener - delete this marker")
             markers.remove(markerToDelete)
             markerToDelete.remove()
         }
@@ -102,9 +113,36 @@ class CreateMapActivity : AppCompatActivity(), OnMapReadyCallback {
             Log.i(TAG, "onMapLongClickListener")
             showAlertDialogue(latLng)
         }
-        // Add a marker in Sydney and move the camera
-        val siliconValley = LatLng(37.4, -122.1)
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(siliconValley, 10f))
+
+        // Move the camera to the current location if available
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
+        fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+            val latLng = if (location != null) {
+                Log.i(TAG, "addOnSuccessListener - successfully obtained location")
+                Log.i(TAG, "${location.latitude}, ${location.longitude}")
+                LatLng(location.latitude, location.longitude)
+            } else {
+                Log.i(TAG, "addOnSuccessListener - fall back to Silicon Valley location")
+                LatLng(37.4, -122.1)
+            }
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 10f))
+        }
     }
 
     private fun showAlertDialogue(latLng: LatLng) {
