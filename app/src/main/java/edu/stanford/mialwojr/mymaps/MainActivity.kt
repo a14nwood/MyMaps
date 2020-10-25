@@ -2,6 +2,7 @@ package edu.stanford.mialwojr.mymaps
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
@@ -11,14 +12,14 @@ import android.view.LayoutInflater
 import android.widget.EditText
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
 import edu.stanford.mialwojr.mymaps.models.Place
 import edu.stanford.mialwojr.mymaps.models.UserMap
 import kotlinx.android.synthetic.main.activity_main.*
+import java.io.*
 
 const val EXTRA_USER_MAP = "EXTRA_USER_MAP"
 const val EXTRA_MAP_TITLE = "EXTRA_MAP_TITLE"
+private const val FILENAME = "UserMaps.data"
 private const val REQUEST_CODE = 1234
 private const val TAG = "MainActivity"
 
@@ -31,7 +32,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        userMaps = generateSampleData().toMutableList()
+        userMaps = deserializeUserMaps(this).toMutableList()
         rvMaps.layoutManager = LinearLayoutManager(this)
         mapAdapter = MapsAdapter(this, userMaps, object : MapsAdapter.OnClickListener {
             override fun onItemClick(position: Int) {
@@ -39,6 +40,10 @@ class MainActivity : AppCompatActivity() {
                 val intent = Intent(this@MainActivity, DisplayMapActivity::class.java)
                 intent.putExtra(EXTRA_USER_MAP, userMaps[position])
                 startActivity(intent)
+                overridePendingTransition(
+                    R.anim.slide_in_right,
+                    R.anim.slide_out_left
+                )
             }
         })
         rvMaps.adapter = mapAdapter
@@ -81,8 +86,29 @@ class MainActivity : AppCompatActivity() {
             Log.i(TAG, "onActivityResult with new map title ${userMap.title}")
             userMaps.add(userMap)
             mapAdapter.notifyItemInserted(userMaps.size - 1)
+            serializeUserMaps(this, userMaps)
         }
         super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    private fun serializeUserMaps(context: Context, userMaps: List<UserMap>) {
+        Log.i(TAG, "serializeUserMaps")
+        ObjectOutputStream(FileOutputStream(getDataFile(context))).use { it.writeObject(userMaps) }
+    }
+
+    private fun deserializeUserMaps(context: Context): List<UserMap> {
+        Log.i(TAG, "deserializeUserMaps")
+        val dataFile = getDataFile(context)
+        if (!dataFile.exists()) {
+            Log.i(TAG, "Data file does not yet exist")
+            return emptyList()
+        }
+        ObjectInputStream(FileInputStream(dataFile)).use { return it.readObject() as List<UserMap> }
+    }
+
+    private fun getDataFile(context: Context): File {
+        Log.i(TAG, "Getting file from directory ${context.filesDir}")
+        return File(context.filesDir, FILENAME)
     }
 
     private fun generateSampleData(): List<UserMap> {
