@@ -24,7 +24,6 @@ private const val REQUEST_CODE = 1234
 private const val TAG = "MainActivity"
 
 class MainActivity : AppCompatActivity() {
-
     private lateinit var userMaps: MutableList<UserMap>
     private lateinit var mapAdapter: MapsAdapter
 

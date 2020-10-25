@@ -28,9 +28,8 @@ import edu.stanford.mialwojr.mymaps.models.UserMap
 private const val TAG = "CreateMapActivity"
 
 class CreateMapActivity : AppCompatActivity(), OnMapReadyCallback {
-
-    private lateinit var mMap: GoogleMap
     private var markers: MutableList<Marker> = mutableListOf()
+    private lateinit var mMap: GoogleMap
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
